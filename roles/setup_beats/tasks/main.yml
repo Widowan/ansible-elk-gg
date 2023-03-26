@@ -1,0 +1,38 @@
+---
+- name: Pull Filebeat image
+  docker_image:
+    name: elastic/filebeat
+    tag: "{{ elk_version }}"
+    source: pull
+  become: true
+
+- name: Copy configs to remote
+  copy:
+    src: "{{ role_path }}/files/"
+    dest: '{{ cfg_folder }}'
+
+- name: Process Filebeat config
+  template:
+    src: "{{ role_path }}/files/filebeat.yml.j2"
+    dest: "{{ cfg_folder }}/filebeat.yml"
+    lstrip_blocks: true
+  vars:
+    output_type: "{{ filebeat_output_type }}"
+
+- name: Create Filebeat container
+  docker_container:
+    name: "filebeat"
+    image: "elastic/filebeat:{{ elk_version }}"
+    networks:
+      - name: "{{ elk_docker_network }}"
+    restart_policy: always
+    recreate: true
+    user: root # As insecure as it is, it's the most convenient way to pass docker.sock's permissions
+    volumes:
+      - "{{ cfg_folder }}/test.log:/app/test.log"
+      - "filebeats-data:/usr/share/filebeat"
+      - "{{ cfg_folder }}/filebeat.yml:/usr/share/filebeat/filebeat.yml"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/var/lib/docker/containers/:/var/lib/docker/containers/:ro"
+      - "/var/log/:/var/log/:ro"
+  become: true

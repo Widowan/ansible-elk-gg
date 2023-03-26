@@ -1,0 +1,5 @@
+---
+cfg_folder: "/tmp/configs"
+elk_docker_network: elk_net
+elk_version: "6.7.2"
+filebeat_output_type: 'logstash'

@@ -1,0 +1,46 @@
+---
+- name: Pull Elasticsearch image
+  docker_image:
+    name: elasticsearch
+    tag: "{{ elk_version }}"
+    source: pull
+  become: true
+
+- name: Copy configs to remote
+  copy:
+    src: "{{ role_path }}/files/"
+    dest: '{{ cfg_folder }}'
+
+- name: Create Elasticsearch container
+  docker_container:
+    name: "elasticsearch"
+    image: "elasticsearch:{{ elk_version }}"
+    networks:
+      - name: "{{ elk_docker_network }}"
+    restart_policy: always
+    recreate: true
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - "{{ cfg_folder }}/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml"
+  become: true
+
+- name: Wait until Elastic is started
+  uri:
+    url: "http://localhost:9200/_template/bogus"
+    method: post
+    body: ""
+  register: result
+  retries: 20
+  until: result.status == 200 or result.status == 400
+  failed_when: false
+  delay: 10
+
+- name: Apply template
+  uri:
+    url: "http://localhost:9200/_template/test_template?include_type_name=true"
+    method: PUT
+    body_format: json
+    src: "{{ role_path }}/files/test-template.json"

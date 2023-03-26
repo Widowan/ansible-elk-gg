@@ -1,0 +1,31 @@
+---
+- name: Pull Logstash image
+  docker_image:
+    name: logstash
+    tag: "{{ elk_version }}"
+    source: pull
+  become: true
+
+- name: Copy configs to remote
+  copy:
+    src: "{{ role_path }}/files/"
+    dest: '{{ cfg_folder }}'
+
+- name: Create Logstash container
+  docker_container:
+    name: "logstash"
+    image: "logstash:{{ elk_version }}"
+    networks:
+      - name: "{{ elk_docker_network }}"
+    restart_policy: always
+    recreate: true
+    command: logstash -f
+    ports:
+      - "5044:5044"
+      - "5000:5000"
+      - "5001:5001"
+    volumes:
+      - "logstash-data:/usr/share/logstash"
+      - "{{ cfg_folder }}/logstash.conf:/usr/share/logstash/pipeline/logstash.conf"
+  become: true
+

@@ -1,0 +1,64 @@
+---
+- name: Pull Kibana image
+  docker_image:
+    name: kibana
+    tag: "{{ elk_version }}"
+    source: pull
+  become: true
+
+- name: Create Kibana container
+  docker_container:
+    name: "kibana"
+    image: "kibana:{{ elk_version }}"
+    networks:
+      - name: "{{ elk_docker_network }}"
+    restart_policy: always
+    recreate: true
+    ports:
+      - "5601:5601"
+    volumes:
+      - kibana-config:/usr/share/kibana/config
+  become: true
+
+- name: Wait until Kibana is started
+  uri:
+    url: "http://localhost:5601/api/saved_objects/index-pattern"
+    method: post
+    body: ""
+  register: result
+  until: result.status == 200 or result.status == 400
+  failed_when: false
+  retries: 10
+  delay: 10
+
+# Legacy objects API is horrible
+- name: Import saved objects into Kibana (legacy)
+  uri:
+    url: "http://localhost:5601/api/saved_objects/{{ item.2 }}/{{ item.0 }}"
+    method: POST
+    body_format: json
+    headers:
+      kbn-xsrf: true
+    body: "{{ lookup('file', role_path + '/files/' + item.1) }}"
+    status_code: [200, 409]
+  loop:
+    - [4875d650-cbd8-11ed-97bc-f5c666746849, index.json, "index-pattern"]
+    - [c48c3c60-cbd9-11ed-97bc-f5c666746849, search.json, "search"]
+    - [47cb5e20-cbdb-11ed-97bc-f5c666746849, messages_per_priority.json, "visualization" ]
+    - [cd37d210-cbda-11ed-97bc-f5c666746849, messages_per_logger.json, "visualization" ]
+    - [ab04ab80-cbe6-11ed-85ac-81d67ee8f2bd, dashboard.json, "dashboard"]
+  retries: 3
+  delay: 5
+  when: elk_version.startswith('6')
+
+- name: Import saved objects into Kibana (new)
+  uri:
+    url: "http://localhost:5601/api/saved_objects/_import?overwrite=true"
+    method: POST
+    body_format: form-multipart
+    body:
+      file:
+        filename: "{{ role_path }}/files/exported.ndjson"
+    headers:
+      kbn-xsrf: true
+  when: not elk_version.startswith('6')

@@ -1,0 +1,18 @@
+{
+  "attributes": {
+    "title": "Recent logstash logs",
+    "description": "",
+    "hits": 0,
+    "columns": [
+      "_source"
+    ],
+    "sort": [
+      "Time",
+      "desc"
+    ],
+    "version": 1,
+    "kibanaSavedObjectMeta": {
+      "searchSourceJSON": "{\"index\":\"4875d650-cbd8-11ed-97bc-f5c666746849\",\"highlightAll\":true,\"version\":true,\"query\":{\"language\":\"lucene\",\"query\":\"*\"},\"filter\":[]}"
+    }
+  }
+}

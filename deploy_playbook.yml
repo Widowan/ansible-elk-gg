@@ -1,0 +1,13 @@
+---
+- name: Deploy ELK Stack
+  gather_facts: true
+  hosts: all
+  vars_files:
+    - sudo_pass
+    - configs.yml
+  roles:
+    - setup_remote
+    - setup_elastic
+    - setup_logstash
+    - setup_beats
+    - setup_kibana
